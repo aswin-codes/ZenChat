@@ -1,3 +1,7 @@
 # ZenChat
-A Full Stack chatting app made with Flutter for Frontend and Node JS , Express for backend and PostgreSQL for the database.
+A Full Stack chatting app
+TechStack
+Frontend - Flutter 
+Backend - Node and Express JS
+Database - PostgreSQL
 

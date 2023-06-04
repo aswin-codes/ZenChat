@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -11,6 +13,37 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen> {
   int pageIndex = 0;
+  late PageController _pageController;
+  late Timer _timer;
+  int _currentIndex = 0;
+  final int _totalPages = 4;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController();
+    _startTimer();
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    _timer.cancel();
+    super.dispose();
+  }
+
+  void _startTimer() {
+    _timer = Timer.periodic(const Duration(seconds: 3), (_) {
+      setState(() {
+        _currentIndex = (_currentIndex + 1) % _totalPages;
+        _pageController.animateToPage(
+          _currentIndex,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+      });
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -58,6 +91,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 height: 350.h,
                 width: 350.h,
                 child: PageView(
+                  controller: _pageController,
                   onPageChanged: (i) {
                     setState(() {
                       pageIndex = i;
@@ -156,13 +190,15 @@ class _SplashScreenState extends State<SplashScreen> {
                                 const Color(0xFF771F98))),
                         onPressed: () {
                           //Need to navigate to next screen
+                          Navigator.pushNamed(context, '/login');
                         },
-                        child: Text("Get Started",
+                        child: Text(
+                          "Get Started",
                           style: GoogleFonts.poppins(
-                            fontSize: 20.sp,
-                            color: const Color(0xFFF3F3F3),
-                            fontWeight: FontWeight.w500
-                          ),)),
+                              fontSize: 20.sp,
+                              color: const Color(0xFFF3F3F3),
+                              fontWeight: FontWeight.w500),
+                        )),
                   ),
                 ),
               )

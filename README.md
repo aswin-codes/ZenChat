@@ -1,7 +1,7 @@
 # ZenChat
 A Full Stack chatting app
 TechStack
-\nFrontend - Flutter 
-\nBackend - Node and Express JS
-\nDatabase - PostgreSQL
+<br/>Frontend - Flutter 
+<br/>Backend - Node and Express JS
+<br/>Database - PostgreSQL
 

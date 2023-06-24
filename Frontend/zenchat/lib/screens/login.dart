@@ -1,7 +1,10 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -14,6 +17,97 @@ class _LoginState extends State<Login> {
   String email = '';
   String password = '';
   bool isVisible = false;
+
+  void showAlert(BuildContext context, String errorMsg) {
+    showDialog(
+      context: context,
+      builder: (
+        BuildContext context,
+      ) {
+        return AlertDialog(
+          title: Text(
+            "Error...",
+            style: GoogleFonts.poppins(
+                fontSize: 20.sp,
+                color: Colors.red,
+                fontWeight: FontWeight.bold),
+          ),
+          content: Text(errorMsg,
+              style: GoogleFonts.poppins(
+                  fontSize: 15.sp,
+                  color: Colors.black,
+                  fontWeight: FontWeight.normal)),
+          actions: <Widget>[
+            TextButton(
+              child: Text('OK'),
+              onPressed: () {
+                // Close the dialog box
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void showSuccess(BuildContext context, String successMsg) {
+    showDialog(
+      context: context,
+      builder: (
+        BuildContext context,
+      ) {
+        return AlertDialog(
+          title: Text(
+            "Success...",
+            style: GoogleFonts.poppins(
+                fontSize: 20.sp,
+                color: Colors.greenAccent,
+                fontWeight: FontWeight.bold),
+          ),
+          content: Text(successMsg,
+              style: GoogleFonts.poppins(
+                  fontSize: 15.sp,
+                  color: Colors.black,
+                  fontWeight: FontWeight.normal)),
+          actions: <Widget>[
+            TextButton(
+              child: Text('OK'),
+              onPressed: () {
+                // Close the dialog box
+                Navigator.pushNamed(context, '/');
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> login(BuildContext context) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    if (email == '') {
+      showAlert(context, "Kindly enter the email");
+    } else if (password == '') {
+      showAlert(context, "Kindly enter your password");
+    } else {
+      final Map<String, String> body = {"email": email, "password": password};
+      final response = await http.post(
+          Uri.parse('http://10.0.2.2:5000/api/login'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode(body));
+      final Map<String, dynamic> respBody = jsonDecode(response.body);
+      if (response.statusCode == 200 && respBody['success'] == true) {
+        final dataString = jsonEncode(respBody['data']);
+        prefs.setString('creds', dataString);
+        showSuccess(context, respBody["msg"]);
+      } else {
+        showAlert(context, respBody["msg"]);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -107,7 +201,6 @@ class _LoginState extends State<Login> {
                         padding: EdgeInsets.only(left: 20.w, bottom: 7.h),
                         child: Text(
                           "Password",
-                          
                           style: GoogleFonts.poppins(
                               fontSize: 15.sp,
                               color: Colors.black,
@@ -183,6 +276,7 @@ class _LoginState extends State<Login> {
                                       const Color(0xFF771F98)),
                                 ),
                                 onPressed: () {
+                                  login(context);
                                   //Need to fetch request
                                 },
                                 child: Text(

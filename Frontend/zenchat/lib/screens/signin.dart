@@ -1,10 +1,12 @@
+import 'dart:convert';
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SignIn extends StatelessWidget {
   const SignIn({super.key});
@@ -42,7 +44,7 @@ class Body extends StatefulWidget {
 class _BodyState extends State<Body> {
   String imagePath = '';
   final ImagePicker _picker = ImagePicker();
-  late File imageFile;
+  File? imageFile;
 
   String fullName = '';
   String email = '';
@@ -51,6 +53,130 @@ class _BodyState extends State<Body> {
 
   bool isVisible = false;
   bool isVisible1 = false;
+
+  void showAlert(BuildContext context, String errorMsg, String title) {
+    showDialog(
+      context: context,
+      builder: (
+        BuildContext context,
+      ) {
+        return AlertDialog(
+          title: Text(
+            title,
+            style: GoogleFonts.poppins(
+                fontSize: 20.sp,
+                color: Colors.red,
+                fontWeight: FontWeight.bold),
+          ),
+          content: Text(errorMsg,
+              style: GoogleFonts.poppins(
+                  fontSize: 15.sp,
+                  color: Colors.black,
+                  fontWeight: FontWeight.normal)),
+          actions: <Widget>[
+            TextButton(
+              child: Text('OK'),
+              onPressed: () {
+                // Close the dialog box
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void showSuccess(BuildContext context, String successMsg) {
+    showDialog(
+      context: context,
+      builder: (
+        BuildContext context,
+      ) {
+        return AlertDialog(
+          title: Text(
+            "Success...",
+            style: GoogleFonts.poppins(
+                fontSize: 20.sp,
+                color: Colors.greenAccent,
+                fontWeight: FontWeight.bold),
+          ),
+          content: Text(successMsg,
+              style: GoogleFonts.poppins(
+                  fontSize: 15.sp,
+                  color: Colors.black,
+                  fontWeight: FontWeight.normal)),
+          actions: <Widget>[
+            TextButton(
+              child: Text('OK'),
+              onPressed: () {
+                // Close the dialog box
+                Navigator.pushNamed(context, '/');
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> signIn(BuildContext context) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    if (fullName == '') {
+      showAlert(
+          context, 'Name Column is empty, enter your full name', 'Error...');
+    } else if (email == '') {
+      showAlert(context, 'Email Column is empty, enter your email', 'Error...');
+    } else if (password == '' || cpassword == '') {
+      showAlert(context, "Password can't be empty", 'Error...');
+    } else if (password == cpassword) {
+      if (imageFile == null) {
+        final Map<String, dynamic> body = {
+          'userName': fullName,
+          'email': email,
+          'password': password,
+        };
+        final response = await http.post(
+            Uri.parse('http://10.0.2.2:5000/api/signin'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(body));
+        final Map<String, dynamic> respBody = jsonDecode(response.body);
+
+        if (response.statusCode == 200 && respBody['success'] == true) {
+          final dataString = jsonEncode(respBody['data']);
+          prefs.setString('creds', dataString);
+          showSuccess(context, respBody["msg"]);
+        } else {
+          showAlert(context, respBody["msg"], "Error...");
+        }
+      } else {
+        List<int> imageBytes = imageFile!.readAsBytesSync();
+        String base64String = base64Encode(imageBytes);
+        final Map<String, dynamic> body = {
+          'userName': fullName,
+          'email': email,
+          'password': password,
+          'img': base64String
+        };
+        final response = await http.post(
+            Uri.parse('http://10.0.2.2:5000/api/signin'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(body));
+        final Map<String, dynamic> respBody = jsonDecode(response.body);
+        
+        if (response.statusCode == 200 && respBody['success'] == true) {
+          final dataString = jsonEncode(respBody['data']);
+          prefs.setString('creds', dataString);
+          showSuccess(context, respBody["msg"]);
+        } else {
+          showAlert(context, respBody["msg"], "Error...");
+        }
+      }
+    } else {
+      showAlert(context, "Both the password must be same", "Error...");
+    }
+  }
 
   void getImage() async {
     XFile? image = await _picker.pickImage(source: ImageSource.gallery);
@@ -277,6 +403,7 @@ class _BodyState extends State<Body> {
                               const Color(0xFF771F98)),
                         ),
                         onPressed: () {
+                          signIn(context);
                           //Need to fetch request
                         },
                         child: Text(

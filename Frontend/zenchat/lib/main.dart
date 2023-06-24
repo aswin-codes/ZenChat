@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:zenchat/screens/home.dart';
 import 'package:zenchat/screens/login.dart';
 import 'package:zenchat/screens/signin.dart';
 import 'package:zenchat/screens/splash.dart';
@@ -43,7 +44,8 @@ class MyApp extends StatelessWidget {
           routes: {
             '/splash': (context) => const SplashScreen(),
             '/login': (context) => const Login(),
-            '/signin' : (context) => const SignIn()
+            '/signin' : (context) => const SignIn(),
+            '/': (context) => const Home()
           },
         );
       },

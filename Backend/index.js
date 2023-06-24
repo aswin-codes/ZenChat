@@ -8,7 +8,7 @@ const pool = require('./db');
 const bcrypt = require('bcrypt');
 
 //Middleware
-server.use(cors());
+//server.use(cors());
 server.use(express.json());
 server.use(express.static(path.join(__dirname, "profileStorage")))
 
@@ -22,7 +22,7 @@ function saveImageFromBase64(base64String) {
     fs.writeFileSync(filePath, imageData);
 
     // Return the file path
-    return filePath;
+    return filename;
 }
 
 //Return hashed password if its successful else return null if there is an error
@@ -80,19 +80,38 @@ async function isValid(email, password) {
         return 5; // Return null if an error occurs during the query
     }
 }
+server.get('/api/test', async (req,res) => {
+    res.send("HI");
+})
 
 server.post(
     '/api/signin',
     async (req, res) => {
         try {
             const { userName, email, password, img } = req.body;
+            console.log(req.body)
             const hashedPassword = await hashPassword(password);
             if (img == null) {
                 const addUser = await pool.query("INSERT INTO \"user\" (username,email,password,profilePath) VALUES ($1,$2,$3,$4) RETURNING *", [userName, email, hashedPassword, null]);
-                res.json({
+                console.log(addUser.rows[0]);
+                const {password,...data} = addUser.rows[0]
+                res.status(200).json({
                     success: true,
-                    msg: "Account created Successfully"
+                    msg: "Account created Successfully",
+                    data: data
                 });
+            }
+            else {
+                var imageName = saveImageFromBase64(img);
+                const addUser = await pool.query("INSERT INTO \"user\" (username,email,password,profilePath) VALUES ($1,$2,$3,$4) RETURNING *", [userName, email, hashedPassword, imageName]);
+                console.log(addUser.rows[0]);
+                const {password,...data} = addUser.rows[0]
+                res.status(200).json({
+                    success: true,
+                    msg: "Account created Successfully",
+                    data: data
+                });
+
             }
             //const addUser= await pool.query('INSERT INTO')
 
@@ -120,10 +139,11 @@ server.post('/api/login', async (req,res) => {
         const code = await isValid(email, password);
         if (code == 1) {
             const creds = await pool.query('SELECT  * FROM \"user\" WHERE email = $1',[email])
+            const { password, ...data} = creds.rows[0]
             res.json({
                 success : true,
                 msg: "Logged In Successfully",
-                data: creds.rows[0]
+                data: data
             })
         }
         else if (code == 2){

@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:zenchat/screens/home.dart';
 import 'package:zenchat/screens/login.dart';
+import 'package:zenchat/screens/otp.dart';
+import 'package:zenchat/screens/otpemail.dart';
+import 'package:zenchat/screens/resetpassword.dart';
 import 'package:zenchat/screens/signin.dart';
 import 'package:zenchat/screens/splash.dart';
 
@@ -45,7 +48,10 @@ class MyApp extends StatelessWidget {
             '/splash': (context) => const SplashScreen(),
             '/login': (context) => const Login(),
             '/signin' : (context) => const SignIn(),
-            '/': (context) => const Home()
+            '/otpemail': (context) => const OTPEmail(),
+            '/otp' : (context) => const OTP(),
+            '/resetpassword': (context) => const ResetPassword(),
+            '/': (context) => const Home(),
           },
         );
       },

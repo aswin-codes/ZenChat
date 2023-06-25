@@ -251,6 +251,7 @@ class _LoginState extends State<Login> {
                         child: GestureDetector(
                           onTap: () {
                             //Need to Navigate to Forgot password screen
+                            Navigator.pushNamed(context, '/otpemail');
                           },
                           child: Text(
                             "Forgot Password",

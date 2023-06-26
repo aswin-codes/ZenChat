@@ -6,11 +6,15 @@ const fs = require('fs')
 const cors = require('cors');
 const pool = require('./db');
 const bcrypt = require('bcrypt');
+const otpGenerator = require('otp-generator');
+const sendOTP = require('./controllers/sendMail');
 
 //Middleware
-//server.use(cors());
+server.use(cors());
 server.use(express.json());
 server.use(express.static(path.join(__dirname, "profileStorage")))
+
+let otp = '';
 
 function saveImageFromBase64(base64String) {
     const directoryPath = path.join(__dirname, "profileStorage")
@@ -61,7 +65,7 @@ async function isValid(email, password) {
         if (userCredentials) {
             const hashedPassword = userCredentials.password;
             const isValid = await comparePwd(password, hashedPassword);
-           
+
             if (isValid) {
                 return 1
             } else if (isValid == false) {
@@ -70,7 +74,7 @@ async function isValid(email, password) {
             else {
                 return 3
             }
-        } 
+        }
         else {
             console.log('User not found');
             return 4 // Return null if the user is not found
@@ -80,9 +84,6 @@ async function isValid(email, password) {
         return 5; // Return null if an error occurs during the query
     }
 }
-server.get('/api/test', async (req,res) => {
-    res.send("HI");
-})
 
 server.post(
     '/api/signin',
@@ -94,7 +95,7 @@ server.post(
             if (img == null) {
                 const addUser = await pool.query("INSERT INTO \"user\" (username,email,password,profilePath) VALUES ($1,$2,$3,$4) RETURNING *", [userName, email, hashedPassword, null]);
                 console.log(addUser.rows[0]);
-                const {password,...data} = addUser.rows[0]
+                const { password, ...data } = addUser.rows[0]
                 res.status(200).json({
                     success: true,
                     msg: "Account created Successfully",
@@ -105,7 +106,7 @@ server.post(
                 var imageName = saveImageFromBase64(img);
                 const addUser = await pool.query("INSERT INTO \"user\" (username,email,password,profilePath) VALUES ($1,$2,$3,$4) RETURNING *", [userName, email, hashedPassword, imageName]);
                 console.log(addUser.rows[0]);
-                const {password,...data} = addUser.rows[0]
+                const { password, ...data } = addUser.rows[0]
                 res.status(200).json({
                     success: true,
                     msg: "Account created Successfully",
@@ -113,8 +114,6 @@ server.post(
                 });
 
             }
-            //const addUser= await pool.query('INSERT INTO')
-
         } catch (error) {
             console.log(error);
             if (error.code == 23505)
@@ -122,64 +121,161 @@ server.post(
                     success: false,
                     msg: "Account is already created with same email"
                 });
-            else{
+            else {
                 res.status(502).json({
-                    success : false,
-                    msg : "There is a server error. Error Code (E002)"
+                    success: false,
+                    msg: "There is a server error. Error Code (E002)"
                 })
             }
         }
     }
 )
 
-server.post('/api/login', async (req,res) => {
-    const {email,password} = req.body;
-    
+server.post('/api/login', async (req, res) => {
+    const { email, password } = req.body;
+
     try {
         const code = await isValid(email, password);
         if (code == 1) {
-            const creds = await pool.query('SELECT  * FROM \"user\" WHERE email = $1',[email])
-            const { password, ...data} = creds.rows[0]
+            const creds = await pool.query('SELECT  * FROM \"user\" WHERE email = $1', [email])
+            const { password, ...data } = creds.rows[0]
             res.json({
-                success : true,
+                success: true,
                 msg: "Logged In Successfully",
                 data: data
             })
         }
-        else if (code == 2){
+        else if (code == 2) {
             res.status(401).json({
-                success : false,
-                msg : "Incorrect Password"
+                success: false,
+                msg: "Incorrect Password"
             })
         }
         else if (code == 3) {
             res.status(502).json({
-                success : false,
-                msg : "Sorry, there is server error. Error Code (E0001)"
+                success: false,
+                msg: "Sorry, there is server error. Error Code (E0001)"
             })
         }
         else if (code == 4) {
             res.status(404).json({
-                success : false,
-                msg : "Account is not yet created from this email"
+                success: false,
+                msg: "Account is not yet created from this email"
             })
         }
 
         else if (code == 5) {
             res.json({
-                success : false,
-                msg : "Sorry, there is a server error. Error Code : E002"
+                success: false,
+                msg: "Sorry, there is a server error. Error Code : E002"
             })
         }
-        
+
     } catch (error) {
         console.log(error);
         res.json({
-            success : false,
-            msg : "Sorry, there is a server error. Error Code : E002"
+            success: false,
+            msg: "Sorry, there is a server error. Error Code : E002"
         })
     }
 })
+
+//Request to check whether an email is already there are not 
+server.get('/api/email/:email', async (req, res) => {
+    try {
+        const { email } = req.params;
+        const noOfEmail = await pool.query('SELECT COUNT(*) FROM "user" WHERE email = $1', [email]);
+        if (noOfEmail.rows[0].count == '1') {
+            res.status(200).json({
+                success: true,
+                isEmailRegistered: true,
+                msg: "Given email is registered"
+            })
+        }
+        else {
+            res.status(200).json({
+                success: true,
+                isEmailRegistered: false,
+                msg: "Given email is not yet registered"
+            })
+        }
+
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            msg: "Sorry, there is a server error. Error Code : E003"
+        })
+    }
+})
+
+//Request for OTP generation
+server.get('/api/generate-otp/:email', async (req, res) => {
+    try {
+
+        const { email } = req.params;
+        otp = otpGenerator.generate(4, { digits: true, lowerCaseAlphabets: false, upperCaseAlphabets: false, specialChars: false });
+        console.log("Generated OTP : ", otp);
+        await sendOTP(otp, email);
+        res.status(200).json({
+            success: true,
+            msg: "OTP Sent Successfully"
+        })
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({
+            success: false,
+            msg: "Sorry, there is a server error. Error Code : E004"
+        })
+    }
+})
+
+server.post('/api/verify-otp', async (req, res) => {
+    try {
+        const { givenOtp } = req.body;
+        if (givenOtp == otp){
+            //OTP is correct
+            res.status(200).json({
+                success : true,
+                isOTPCorrect : true,
+                msg : "OTP entered correctly"
+            })
+        } 
+        else {
+            //OTP is incorrect
+            res.status(401).json({
+                success : true,
+                isOTPCorrect : false,
+                msg : "Wrong OTP entered. Kindly check the email and enter again"
+            });
+        }       
+
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({
+            success : false,
+            msg : "Sorry, there is a server error. Error Code : E005"
+        })
+    }
+})
+
+server.post('/api/reset-password', async (req,res) => {
+    try {
+        const { email, password } = req.body;
+        const hashedPassword = await hashPassword(password);
+        const updatePassword = await pool.query('UPDATE "user" SET password = $1 WHERE email = $2',[hashedPassword,email]);
+        res.status(200).json({
+            success : true,
+            msg : "Password updated successfully"
+        })
+
+    } catch (error) {
+        res.status(500).json({
+            success : false,
+            msg : "Sorry, there is a server error. Error Code : E006"
+        })
+    }
+})
+
 
 server.listen(5000, () => {
     console.log("server listening at port 5000");

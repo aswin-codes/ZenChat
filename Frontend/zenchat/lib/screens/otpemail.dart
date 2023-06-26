@@ -1,6 +1,9 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
 
 class OTPEmail extends StatelessWidget {
   const OTPEmail({super.key});
@@ -37,6 +40,58 @@ class Body extends StatefulWidget {
 
 class _BodyState extends State<Body> {
   String email = '';
+
+  void showAlert(BuildContext context, String errorMsg) {
+    showDialog(
+      context: context,
+      builder: (
+        BuildContext context,
+      ) {
+        return AlertDialog(
+          title: Text(
+            "Error...",
+            style: GoogleFonts.poppins(
+                fontSize: 20.sp,
+                color: Colors.red,
+                fontWeight: FontWeight.bold),
+          ),
+          content: Text(errorMsg,
+              style: GoogleFonts.poppins(
+                  fontSize: 15.sp,
+                  color: Colors.black,
+                  fontWeight: FontWeight.normal)),
+          actions: <Widget>[
+            TextButton(
+              child: Text('OK'),
+              onPressed: () {
+                // Close the dialog box
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> isEmailRegistered() async {
+    if (email == '') {
+      showAlert(context, "Kindly entered registered email");
+    } else {
+      final response =
+          await http.get(Uri.parse('http://10.0.2.2:5000/api/email/${email}'));
+      final Map<String, dynamic> respBody = jsonDecode(response.body);
+      if (response.statusCode == 200 && respBody['success'] == true) {
+        if (respBody['isEmailRegistered']) {
+          Navigator.pushNamed(context, '/otp', arguments: email);
+        } else {
+          showAlert(context, respBody['msg']);
+        }
+      } else {
+        showAlert(context, respBody['msg']);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -109,7 +164,7 @@ class _BodyState extends State<Body> {
                       ),
                       onPressed: () {
                         //Need to fetch request
-                        Navigator.pushNamed(context, '/otp');
+                        isEmailRegistered();
                       },
                       child: Text(
                         "Continue",

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zenchat/screens/home.dart';
 import 'package:zenchat/screens/login.dart';
 import 'package:zenchat/screens/otp.dart';
@@ -15,17 +16,36 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    //Set the fit size (Find your UI design, look at the dimensions of the device screen and fill it in,unit in dp)
-    return ScreenUtilInit(
-      designSize: const Size(393, 852),
-      minTextAdapt: true,
-      splitScreenMode: true,
-      builder: (context, child) {
-        return MaterialApp(
-          debugShowCheckedModeBanner: false,
-          title: 'ZenChat',
-          // You can use the library anywhere in the app even in theme
-          theme: ThemeData(
+    return FutureBuilder<SharedPreferences>(
+      future: SharedPreferences.getInstance(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          // Future is not yet complete, show a loading indicator
+          return CircularProgressIndicator();
+        }
+
+        if (snapshot.hasError) {
+          // Error occurred while retrieving SharedPreferences
+          return Text('Error: ${snapshot.error}');
+        }
+
+        final SharedPreferences prefs = snapshot.data!;
+
+        final String? creds = prefs.getString('creds');
+
+        // Determine the initial route based on login status
+        String initialRoute = creds==null? '/splash' : '/';
+
+        // Build the app
+        return ScreenUtilInit(
+          designSize: const Size(393, 852),
+          minTextAdapt: true,
+          splitScreenMode: true,
+          builder: (context, child) {
+            return MaterialApp(
+              debugShowCheckedModeBanner: false,
+              title: 'ZenChat',
+               theme: ThemeData(
             primarySwatch: const MaterialColor(
               0xff771f98,
               <int, Color>{
@@ -43,15 +63,17 @@ class MyApp extends StatelessWidget {
             ),
             textTheme: Typography.englishLike2018.apply(fontSizeFactor: 1.sp),
           ),
-          initialRoute: '/splash',
-          routes: {
-            '/splash': (context) => const SplashScreen(),
-            '/login': (context) => const Login(),
-            '/signin' : (context) => const SignIn(),
-            '/otpemail': (context) => const OTPEmail(),
-            '/otp' : (context) => const OTP(),
-            '/resetpassword': (context) => const ResetPassword(),
-            '/': (context) => const Home(),
+              initialRoute: initialRoute,
+              routes: {
+                '/splash': (context) => const SplashScreen(),
+                '/login': (context) => const Login(),
+                '/signin': (context) => const SignIn(),
+                '/otpemail': (context) => const OTPEmail(),
+                '/otp': (context) => OTP(),
+                '/resetpassword': (context) => const ResetPassword(),
+                '/': (context) => const Home(),
+              },
+            );
           },
         );
       },

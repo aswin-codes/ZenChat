@@ -1,12 +1,16 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
 
 class ResetPassword extends StatelessWidget {
   const ResetPassword({super.key});
 
   @override
   Widget build(BuildContext context) {
+    String email = ModalRoute.of(context)!.settings.arguments as String;
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -23,13 +27,16 @@ class ResetPassword extends StatelessWidget {
               size: 37,
             )),
       ),
-      body: Body(),
+      body: Body(
+        email: email,
+      ),
     );
   }
 }
 
 class Body extends StatefulWidget {
-  const Body({super.key});
+  String email;
+  Body({super.key, required this.email});
 
   @override
   State<Body> createState() => _BodyState();
@@ -41,6 +48,99 @@ class _BodyState extends State<Body> {
 
   bool isVisible = false;
   bool isVisible1 = false;
+
+  void showAlert(BuildContext context, String errorMsg) {
+    showDialog(
+      context: context,
+      builder: (
+        BuildContext context,
+      ) {
+        return AlertDialog(
+          title: Text(
+            "Error...",
+            style: GoogleFonts.poppins(
+                fontSize: 20.sp,
+                color: Colors.red,
+                fontWeight: FontWeight.bold),
+          ),
+          content: Text(errorMsg,
+              style: GoogleFonts.poppins(
+                  fontSize: 15.sp,
+                  color: Colors.black,
+                  fontWeight: FontWeight.normal)),
+          actions: <Widget>[
+            TextButton(
+              child: Text('OK'),
+              onPressed: () {
+                // Close the dialog box
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void showSuccess(BuildContext context, String successMsg) {
+    showDialog(
+      context: context,
+      builder: (
+        BuildContext context,
+      ) {
+        return AlertDialog(
+          title: Text(
+            "Success...",
+            style: GoogleFonts.poppins(
+                fontSize: 20.sp,
+                color: Colors.greenAccent,
+                fontWeight: FontWeight.bold),
+          ),
+          content: Text(successMsg,
+              style: GoogleFonts.poppins(
+                  fontSize: 15.sp,
+                  color: Colors.black,
+                  fontWeight: FontWeight.normal)),
+          actions: <Widget>[
+            TextButton(
+              child: Text('OK'),
+              onPressed: () {
+                // Close the dialog box
+                Navigator.pushReplacementNamed(context, '/login');
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> resetPassword() async {
+    if (password == '' || cpassword == '') {
+      showAlert(context, 'Both the password fields should be filled');
+    } else if (password != cpassword) {
+      showAlert(context, 'Both the password fields must be same');
+    } else {
+      final Map<String, String> reqBody = {
+        "email": widget.email,
+        "password": password
+      };
+
+      final response = await http.post(
+          Uri.parse('http://10.0.2.2:5000/api/reset-password'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode(reqBody));
+
+      final respBody = await jsonDecode(response.body);
+
+      if (response.statusCode == 200 && respBody['success'] == true) {
+        showSuccess(context, respBody['msg']);
+      } else {
+        showAlert(context, respBody['msg']);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -173,7 +273,7 @@ class _BodyState extends State<Body> {
                       ),
                       onPressed: () {
                         //Need to fetch request
-                        Navigator.pushReplacementNamed(context, '/login');
+                        resetPassword();
                       },
                       child: Text(
                         "Change Password",

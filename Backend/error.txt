@@ -1,2 +1,6 @@
 E001 - Encryption Error. Error in bcrypt
 E002 - Error while connecting database
+E003 - Server Error
+E004 - OTP generation error
+E005 - OTP verification error
+E006 - Password Reset Error

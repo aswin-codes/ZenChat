@@ -12,6 +12,8 @@
   "dependencies": {
     "bcrypt": "^5.1.0",
     "cors": "^2.8.5",
+    "nodemailer": "^6.9.3",
+    "otp-generator": "^4.0.1",
     "pg": "^8.11.0",
     "uuid": "^9.0.0"
   },

@@ -1,14 +1,20 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:otp_text_field/otp_field.dart';
 import 'package:otp_text_field/style.dart';
+import 'package:http/http.dart' as http;
 
 class OTP extends StatelessWidget {
-  const OTP({super.key});
+  const OTP({
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final String email = ModalRoute.of(context)!.settings.arguments as String;
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -25,13 +31,16 @@ class OTP extends StatelessWidget {
               size: 37,
             )),
       ),
-      body: const Body(),
+      body: Body(
+        email: email,
+      ),
     );
   }
 }
 
 class Body extends StatefulWidget {
-  const Body({super.key});
+  String email;
+  Body({super.key, required this.email});
 
   @override
   State<Body> createState() => _BodyState();
@@ -39,6 +48,77 @@ class Body extends StatefulWidget {
 
 class _BodyState extends State<Body> {
   String otp = '';
+
+  void showAlert(BuildContext context, String errorMsg) {
+    showDialog(
+      context: context,
+      builder: (
+        BuildContext context,
+      ) {
+        return AlertDialog(
+          title: Text(
+            "Error...",
+            style: GoogleFonts.poppins(
+                fontSize: 20.sp,
+                color: Colors.red,
+                fontWeight: FontWeight.bold),
+          ),
+          content: Text(errorMsg,
+              style: GoogleFonts.poppins(
+                  fontSize: 15.sp,
+                  color: Colors.black,
+                  fontWeight: FontWeight.normal)),
+          actions: <Widget>[
+            TextButton(
+              child: Text('OK'),
+              onPressed: () {
+                // Close the dialog box
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> generateOTP() async {
+    
+    final response = await http.get(
+        Uri.parse('http://10.0.2.2:5000/api/generate-otp/${widget.email}'));
+    final respBody = jsonDecode(response.body);
+    if (response.statusCode == 200 && respBody['success'] == true) {
+    } else {
+      showAlert(context, respBody['msg']);
+    }
+  }
+
+  Future<void> checkOTP() async {
+    final Map<String, dynamic> body = {"givenOtp": otp};
+    final response = await http.post(
+        Uri.parse('http://10.0.2.2:5000/api/verify-otp'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(body));
+    final respBody = jsonDecode(response.body);
+
+    if (response.statusCode == 200 && respBody['success'] == true) {
+      if (respBody['isOTPCorrect']) {
+        Navigator.pushReplacementNamed(context, '/resetpassword',
+            arguments: widget.email);
+      } else {
+        showAlert(context, respBody['msg']);
+        await generateOTP();
+      }
+    } else {
+      showAlert(context, respBody['msg']);
+    }
+  }
+
+  @override
+  void initState() {
+    generateOTP();
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -102,7 +182,7 @@ class _BodyState extends State<Body> {
                       ),
                       onPressed: () {
                         //Need to fetch request
-                        Navigator.pushReplacementNamed(context, '/resetpassword');
+                        checkOTP();
                       },
                       child: Text(
                         "Continue",
@@ -120,6 +200,7 @@ class _BodyState extends State<Body> {
             Center(
               child: GestureDetector(
                 onTap: () {
+                  generateOTP();
                   //Resend OTP
                 },
                 child: Text(

@@ -6,6 +6,7 @@ import 'package:zenchat/screens/login.dart';
 import 'package:zenchat/screens/otp.dart';
 import 'package:zenchat/screens/otpemail.dart';
 import 'package:zenchat/screens/resetpassword.dart';
+import 'package:zenchat/screens/search.dart';
 import 'package:zenchat/screens/signin.dart';
 import 'package:zenchat/screens/splash.dart';
 
@@ -72,6 +73,7 @@ class MyApp extends StatelessWidget {
                 '/otp': (context) => OTP(),
                 '/resetpassword': (context) => const ResetPassword(),
                 '/': (context) => const Home(),
+                '/search': (context) => const Search(),
               },
             );
           },

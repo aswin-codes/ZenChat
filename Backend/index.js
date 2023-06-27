@@ -8,11 +8,13 @@ const pool = require('./db');
 const bcrypt = require('bcrypt');
 const otpGenerator = require('otp-generator');
 const sendOTP = require('./controllers/sendMail');
+const bodyParser = require('body-parser')
 
 //Middleware
 server.use(cors());
 server.use(express.json());
 server.use(express.static(path.join(__dirname, "profileStorage")))
+server.use(bodyParser.json({limit: ' 10mb'}))
 
 let otp = '';
 
@@ -273,6 +275,58 @@ server.post('/api/reset-password', async (req,res) => {
             success : false,
             msg : "Sorry, there is a server error. Error Code : E006"
         })
+    }
+})
+
+server.get('/api/users/search', async (req,res) => {
+    try {
+        const {query} = req.query;
+
+        const result = await pool.query(
+            'SELECT username, email, profilepath FROM "user" WHERE username ILIKE $1 OR email ILIKE $1 LIMIT 10',[`%${query}%`]
+        )
+
+        const users = result.rows;
+       
+
+        res.status(200).json({
+            success : true,
+            msg : "Users fetched successfully",
+            data : users
+        })
+        
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({
+            success : false,
+            msg: "Sorry, there is a server error. Error Code : E007"
+        });
+    }
+})
+
+server.get('/api/users/random', async (req,res) => {
+    try {
+       
+
+        const result = await pool.query(
+            'SELECT username, email, profilepath FROM "user" ORDER BY RANDOM() LIMIT 10'
+        )
+
+        const users = result.rows;
+        console.log(users);
+
+        res.status(200).json({
+            success : true,
+            msg : "Users fetched successfully",
+            data : users
+        })
+        
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({
+            success : false,
+            msg: "Sorry, there is a server error. Error Code : E007"
+        });
     }
 })
 

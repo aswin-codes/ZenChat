@@ -64,7 +64,9 @@ class Home extends StatelessWidget {
                   color: const Color(0xFF696969),
                 )),
             IconButton(
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.pushNamed(context, '/settings');
+                },
                 icon: Icon(
                   Icons.settings_outlined,
                   size: 30.h,

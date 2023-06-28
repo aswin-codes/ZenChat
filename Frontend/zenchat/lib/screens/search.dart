@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -49,7 +48,9 @@ class Search extends StatelessWidget {
                   color: const Color(0xFF771F98),
                 )),
             IconButton(
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.pushNamed(context, '/settings');
+                },
                 icon: Icon(
                   Icons.settings_outlined,
                   size: 30.h,
@@ -207,73 +208,73 @@ class _BodyState extends State<Body> {
               height: 30.h,
             ),
             Expanded(
-              child: (_users.length != 0) ? ListView.builder(
-                itemCount: _users.length,
-                itemBuilder: (BuildContext context, int index) {
-                  final User user = _users[index];
-                  return Container(
-                    padding:
-                        EdgeInsets.symmetric(horizontal: 17.w, vertical: 10.h),
-                    margin: EdgeInsets.symmetric(vertical: 15.h),
-                    height: 70.h,
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Color(0xFF771F98), width: 2),
-                      borderRadius: BorderRadius.circular(14.r),
-                    ),
-                    child: Row(
-                      children: [
-                        CircleAvatar(
-                          backgroundImage: (user.profileID != null)
-                              ? NetworkImage(
-                                  'http://10.0.2.2:5000/${user.profileID}')
-                              : null,
-                          backgroundColor: Colors.grey,
-                          child: (user.profileID == null)
-                              ? Icon(
-                                  Icons.account_circle_outlined,
-                                  size: 30.h,
-                                  color: Colors.black,
+                child: (_users.length != 0)
+                    ? ListView.builder(
+                        itemCount: _users.length,
+                        itemBuilder: (BuildContext context, int index) {
+                          final User user = _users[index];
+                          return Container(
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 17.w, vertical: 10.h),
+                            margin: EdgeInsets.symmetric(vertical: 15.h),
+                            height: 70.h,
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                  color: Color(0xFF771F98), width: 2),
+                              borderRadius: BorderRadius.circular(14.r),
+                            ),
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  backgroundImage: (user.profileID != null)
+                                      ? NetworkImage(
+                                          'http://10.0.2.2:5000/${user.profileID}')
+                                      : null,
+                                  backgroundColor: Colors.grey,
+                                  child: (user.profileID == null)
+                                      ? Icon(
+                                          Icons.account_circle_outlined,
+                                          size: 30.h,
+                                          color: Colors.black,
+                                        )
+                                      : null,
+                                ),
+                                SizedBox(
+                                  width: 15.w,
+                                ),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      user.userName,
+                                      style: GoogleFonts.poppins(
+                                        fontWeight: FontWeight.w600,
+                                        color: const Color(0xFF181818),
+                                        fontSize: 16.sp,
+                                      ),
+                                    ),
+                                    Text(
+                                      user.email,
+                                      style: GoogleFonts.poppins(
+                                        color: const Color(0xFF6B6B6B),
+                                        fontSize: 12.sp,
+                                      ),
+                                    ),
+                                  ],
                                 )
-                              : null,
-                        ),
-                        SizedBox(
-                          width: 15.w,
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              user.userName,
-                              style: GoogleFonts.poppins(
-                                fontWeight: FontWeight.w600,
-                                color: const Color(0xFF181818),
-                                fontSize: 16.sp,
-                              ),
+                              ],
                             ),
-                            Text(
-                              user.email,
-                              style: GoogleFonts.poppins(
-                                color: const Color(0xFF6B6B6B),
-                                fontSize: 12.sp,
-                              ),
-                            ),
-                          ],
-                        )
-                      ],
-                    ),
-                  );
-                },
-              ) : Center(
-                child: Text("No users found",
-                style: GoogleFonts.poppins(
-                  fontSize: 15.sp,
-                  color: Colors.black
-                ),
-                ),
-              )
-            ),
-        
+                          );
+                        },
+                      )
+                    : Center(
+                        child: Text(
+                          "No users found",
+                          style: GoogleFonts.poppins(
+                              fontSize: 15.sp, color: Colors.black),
+                        ),
+                      )),
           ],
         ),
       ),

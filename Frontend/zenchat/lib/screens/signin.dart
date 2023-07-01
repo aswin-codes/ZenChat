@@ -130,48 +130,76 @@ class _BodyState extends State<Body> {
       showAlert(context, 'Email Column is empty, enter your email', 'Error...');
     } else if (password == '' || cpassword == '') {
       showAlert(context, "Password can't be empty", 'Error...');
+    } else if (imageFile == null) {
+      showAlert(context, "Profile picture not selected", "Error...");
     } else if (password == cpassword) {
-      if (imageFile == null) {
-        final Map<String, dynamic> body = {
-          'userName': fullName,
-          'email': email,
-          'password': password,
-        };
-        final response = await http.post(
-            Uri.parse('http://10.0.2.2:5000/api/signin'),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode(body));
-        final Map<String, dynamic> respBody = jsonDecode(response.body);
+      // if (imageFile == null) {
+      //   final Map<String, dynamic> body = {
+      //     'userName': fullName,
+      //     'email': email,
+      //     'password': password,
+      //   };
+      //   final response = await http.post(
+      //       Uri.parse('http://10.0.2.2:5000/api/signin'),
+      //       headers: {'Content-Type': 'application/json'},
+      //       body: jsonEncode(body));
+      //   final Map<String, dynamic> respBody = jsonDecode(response.body);
 
-        if (response.statusCode == 200 && respBody['success'] == true) {
-          final dataString = jsonEncode(respBody['data']);
-          prefs.setString('creds', dataString);
-          showSuccess(context, respBody["msg"]);
-        } else {
-          showAlert(context, respBody["msg"], "Error...");
-        }
-      } else {
-        List<int> imageBytes = imageFile!.readAsBytesSync();
-        String base64String = base64Encode(imageBytes);
-        final Map<String, dynamic> body = {
-          'userName': fullName,
-          'email': email,
-          'password': password,
-          'img': base64String
-        };
-        final response = await http.post(
-            Uri.parse('http://10.0.2.2:5000/api/signin'),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode(body));
-        final Map<String, dynamic> respBody = jsonDecode(response.body);
+      //   if (response.statusCode == 200 && respBody['success'] == true) {
+      //     final dataString = jsonEncode(respBody['data']);
+      //     prefs.setString('creds', dataString);
+      //     showSuccess(context, respBody["msg"]);
+      //   } else {
+      //     showAlert(context, respBody["msg"], "Error...");
+      //   }
+      // } else {
+      //   List<int> imageBytes = imageFile!.readAsBytesSync();
+      //   String base64String = base64Encode(imageBytes);
+      //   final Map<String, dynamic> body = {
+      //     'userName': fullName,
+      //     'email': email,
+      //     'password': password,
+      //     'img': base64String
+      //   };
+      //   final response = await http.post(
+      //       Uri.parse('http://10.0.2.2:5000/api/signin'),
+      //       headers: {'Content-Type': 'application/json'},
+      //       body: jsonEncode(body));
+      //   final Map<String, dynamic> respBody = jsonDecode(response.body);
+
+      //   if (response.statusCode == 200 && respBody['success'] == true) {
+      //     final dataString = jsonEncode(respBody['data']);
+      //     prefs.setString('creds', dataString);
+      //     showSuccess(context, respBody["msg"]);
+      //   } else {
+      //     showAlert(context, respBody["msg"], "Error...");
+      //   }
+      // }
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      final url = Uri.parse('http://10.0.2.2:5000/api/signin');
+      final request = http.MultipartRequest('POST', url);
+      request.fields['email'] = email;
+      request.fields['userName'] = fullName;
+      request.fields['userpassword'] = password;
+      final image = await http.MultipartFile.fromPath(
+        'image',
+        imagePath,
+      );
+      request.files.add(image);
+      try {
+        final response = await request.send();
+        final responseBody = await response.stream.bytesToString();
+        final Map<dynamic, dynamic> jsonData = jsonDecode(responseBody);
+        if (response.statusCode == 200 && jsonData['success'] == true) {
+          final dataString = jsonEncode(jsonData['data']);
         
-        if (response.statusCode == 200 && respBody['success'] == true) {
-          final dataString = jsonEncode(respBody['data']);
           prefs.setString('creds', dataString);
-          showSuccess(context, respBody["msg"]);
+          showSuccess(context, jsonData['msg']);
         } else {
-          showAlert(context, respBody["msg"], "Error...");
+          showAlert(context, jsonData['msg'], "Error...");
         }
+      } catch (err) {
+        print("Error making the request $err");
       }
     } else {
       showAlert(context, "Both the password must be same", "Error...");

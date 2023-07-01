@@ -8,3 +8,13 @@ CREATE TABLE "user" (  --Creating table for storing user info
     profilePath TEXT
 );
 
+CREATE TABLE chats ( --Creating table for storing chats
+  chat_id SERIAL PRIMARY KEY,
+  sender_id INT NOT NULL,
+  receiver_id INT NOT NULL,
+  message TEXT NOT NULL,
+  timestamp TIMESTAMPTZ DEFAULT NOW(),
+  FOREIGN KEY (sender_id) REFERENCES "user" (id),
+  FOREIGN KEY (receiver_id) REFERENCES "user" (id)
+);
+

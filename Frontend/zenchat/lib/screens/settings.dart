@@ -7,6 +7,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
 
 class Settings extends StatelessWidget {
   const Settings({super.key});
@@ -78,7 +79,7 @@ class _BodyState extends State<Body> {
   String userName = '';
   String email = '';
   String profilePic = '';
-  String base64 = '';
+  List<int> bytes = [];
 
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
@@ -86,6 +87,103 @@ class _BodyState extends State<Body> {
   String imagePath = '';
   final ImagePicker _picker = ImagePicker();
   File? imageFile;
+
+  void showAlert(BuildContext context, String errorMsg, String title) {
+    showDialog(
+      context: context,
+      builder: (
+        BuildContext context,
+      ) {
+        return AlertDialog(
+          title: Text(
+            title,
+            style: GoogleFonts.poppins(
+                fontSize: 20.sp,
+                color: Colors.red,
+                fontWeight: FontWeight.bold),
+          ),
+          content: Text(errorMsg,
+              style: GoogleFonts.poppins(
+                  fontSize: 15.sp,
+                  color: Colors.black,
+                  fontWeight: FontWeight.normal)),
+          actions: <Widget>[
+            TextButton(
+              child: Text('OK'),
+              onPressed: () {
+                // Close the dialog box
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void showSuccess(BuildContext context, String successMsg) {
+    showDialog(
+      context: context,
+      builder: (
+        BuildContext context,
+      ) {
+        return AlertDialog(
+          title: Text(
+            "Success...",
+            style: GoogleFonts.poppins(
+                fontSize: 20.sp,
+                color: Colors.greenAccent,
+                fontWeight: FontWeight.bold),
+          ),
+          content: Text(successMsg,
+              style: GoogleFonts.poppins(
+                  fontSize: 15.sp,
+                  color: Colors.black,
+                  fontWeight: FontWeight.normal)),
+          actions: <Widget>[
+            TextButton(
+              child: Text('OK'),
+              onPressed: () {
+                // Close the dialog box
+                Navigator.pushNamed(context, '/');
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> updateChange() async {
+    print("updateChange() function called");
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      final url = Uri.parse('http://10.0.2.2:5000/api/users/$id');
+      final request = http.MultipartRequest('PATCH', url);
+      request.fields['userName'] = userName;
+      request.fields['email'] = email;
+      final tempDir = await Directory.systemTemp.createTemp();
+      final tempFile = File('${tempDir.path}/$id.png');
+      await tempFile.writeAsBytes(bytes);
+      final image = await http.MultipartFile.fromPath('image', tempFile.path);
+      request.files.add(image);
+      final response = await request.send();
+      final responseBody = await response.stream.bytesToString();
+      final Map<dynamic, dynamic> jsonData = jsonDecode(responseBody);
+      if (response.statusCode == 200 && jsonData['success']) {
+        final dataString = jsonEncode(jsonData['data']);
+        prefs.setString('creds', dataString);
+        showSuccess(context, jsonData['msg']);
+      } else {
+        showAlert(context, jsonData['msg'], 'Error...');
+      }
+      await tempFile.delete();
+    } catch (err) {
+      print("Error Updating data : $err");
+      showAlert(context, "Sorry, there is a server error. Try again later",
+          "Error...");
+    }
+  }
 
   Future<void> getLocalData() async {
     print('getLocalData called');
@@ -101,9 +199,8 @@ class _BodyState extends State<Body> {
       final response =
           await http.get(Uri.parse('http://10.0.2.2:5000/$profilePic'));
       if (response.statusCode == 200) {
-        final bytes = response.bodyBytes;
         setState(() {
-          base64 = base64Encode(bytes);
+          bytes = response.bodyBytes;
         });
       }
     } catch (error) {
@@ -199,9 +296,8 @@ class _BodyState extends State<Body> {
       imagePath = image!.path;
       imageFile = File(image.path);
     });
-    List<int> imageBytes = imageFile!.readAsBytesSync();
     setState(() {
-      base64 = base64Encode(imageBytes);
+      bytes = imageFile!.readAsBytesSync();
     });
   }
 
@@ -312,7 +408,7 @@ class _BodyState extends State<Body> {
                               alignment: Alignment.center,
                               child: TextButton(
                                   onPressed: () {
-                                    Navigator.pushNamed(context, '/otpemail');
+                                    Navigator.pushNamed(context, '/changepassword');
                                   },
                                   child: Text(
                                     "Change Password",
@@ -377,7 +473,9 @@ class _BodyState extends State<Body> {
               child: ClipRRect(
                 borderRadius: BorderRadius.all(Radius.circular(7.r)),
                 child: ElevatedButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      updateChange();
+                    },
                     child: Text(
                       "Save Changes",
                       style: GoogleFonts.poppins(

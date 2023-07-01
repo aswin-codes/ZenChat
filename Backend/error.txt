@@ -5,3 +5,5 @@ E004 - OTP generation error
 E005 - OTP verification error
 E006 - Password Reset Error
 E007 - Account Search Error
+E008 - Account Updating Error
+E009 - Password checking for change password error

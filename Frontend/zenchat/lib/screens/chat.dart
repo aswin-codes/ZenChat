@@ -157,6 +157,7 @@ class _ChatState extends State<Chat> {
                             ? Alignment.topRight
                             : Alignment.topLeft,
                         child: Column(
+                          crossAxisAlignment: (id == _message.id) ? CrossAxisAlignment.end : CrossAxisAlignment.start,
                           children: [
                             Container(
                               padding: const EdgeInsets.all(10),
@@ -181,11 +182,17 @@ class _ChatState extends State<Chat> {
                                     fontWeight: FontWeight.w400),
                               ),
                             ),
+                            SizedBox(height: 5.h,),
                             Container(
+                              padding: EdgeInsets.all(2),
                               decoration: BoxDecoration(
                                   color: const Color(0xFFF1F1F1),
                                   borderRadius: BorderRadius.circular(5)),
-                              child: Text('${_message.time.minute}:'),
+                              child: Text('${(_message.time.hour <10) ? "0" +_message.time.hour.toString() : _message.time.hour}:${(_message.time.minute <10) ? "0" +_message.time.minute.toString() : _message.time.minute}', style: GoogleFonts.poppins(
+                                fontSize: 12.sp,
+                                color: Colors.black,
+                                fontWeight: FontWeight.w400
+                              ),),
                             )
                           ],
                         ),

@@ -330,15 +330,17 @@ server.post('/api/reset-password', async (req, res) => {
     }
 })
 
-server.get('/api/users/search', async (req, res) => {
+server.get('/api/users/:id/search', async (req, res) => {
     try {
+        const { id } = req.params;
         const { query } = req.query;
 
         const result = await pool.query(
-            'SELECT username, email, profilepath FROM "user" WHERE username ILIKE $1 OR email ILIKE $1 LIMIT 10', [`%${query}%`]
+            'SELECT username, email, profilepath,id FROM "user" WHERE id <> $2 AND (username ILIKE $1 OR email ILIKE $1)  LIMIT 10', [`%${query}%`,id]
         )
 
         const users = result.rows;
+        
 
 
         res.status(200).json({
@@ -356,12 +358,12 @@ server.get('/api/users/search', async (req, res) => {
     }
 })
 
-server.get('/api/users/random', async (req, res) => {
+server.get('/api/users/random/:id', async (req, res) => {
     try {
 
-
+        const {id} = req.params;
         const result = await pool.query(
-            'SELECT username, email, profilepath FROM "user" ORDER BY RANDOM() LIMIT 10'
+            'SELECT username, email, profilepath,id FROM "user" WHERE id <> $1 ORDER BY RANDOM() LIMIT 10 ',[id]
         )
 
         const users = result.rows;

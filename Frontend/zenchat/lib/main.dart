@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zenchat/screens/changepassword.dart';
+import 'package:zenchat/screens/chat.dart';
 import 'package:zenchat/screens/home.dart';
 import 'package:zenchat/screens/login.dart';
 import 'package:zenchat/screens/otp.dart';
@@ -77,7 +78,8 @@ class MyApp extends StatelessWidget {
                 '/': (context) => const Home(),
                 '/search': (context) => const Search(),
                 '/settings': (context) => const Settings(),
-                '/changepassword' : (context) => const ChangePassword()
+                '/changepassword' : (context) => const ChangePassword(),
+                '/chat' : (context) => const Chat(),
               },
             );
           },

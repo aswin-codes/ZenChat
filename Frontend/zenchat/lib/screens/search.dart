@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class Search extends StatelessWidget {
   const Search({super.key});
@@ -110,7 +111,10 @@ class _BodyState extends State<Body> {
   List<User> _users = [];
 
   Future<void> randomUser() async {
-    final url = Uri.parse('http://10.0.2.2:5000/api/users/random');
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    final Map<dynamic, dynamic> data = jsonDecode(prefs.getString('creds')!);
+    final id = data['id'];
+    final url = Uri.parse('http://10.0.2.2:5000/api/users/random/$id');
     final response = await http.get(url);
 
     if (response.statusCode == 200) {
@@ -119,6 +123,7 @@ class _BodyState extends State<Body> {
       for (int i = 0; i < respBody['data'].length; i++) {
         final currentData = respBody['data'][i];
         data.add(User(
+            id: currentData['id'],
             userName: currentData['username'],
             email: currentData['email'],
             profileID: currentData['profilepath']));
@@ -136,8 +141,11 @@ class _BodyState extends State<Body> {
     setState(() {
       query = _searchController.text;
     });
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    final Map<dynamic, dynamic> data = jsonDecode(prefs.getString('creds')!);
+    final id = data['id'];
 
-    final url = Uri.parse('http://10.0.2.2:5000/api/users/search?query=$query');
+    final url = Uri.parse('http://10.0.2.2:5000/api/users/$id/search?query=$query');
     final response = await http.get(url);
     final Map<dynamic, dynamic> respBody = jsonDecode(response.body);
     if (response.statusCode == 200 && respBody['success'] == true) {
@@ -145,6 +153,7 @@ class _BodyState extends State<Body> {
       for (int i = 0; i < respBody['data'].length; i++) {
         final currentData = respBody['data'][i];
         data.add(User(
+            id: currentData['id'],
             userName: currentData['username'],
             email: currentData['email'],
             profileID: currentData['profilepath']));
@@ -213,57 +222,64 @@ class _BodyState extends State<Body> {
                         itemCount: _users.length,
                         itemBuilder: (BuildContext context, int index) {
                           final User user = _users[index];
-                          return Container(
-                            padding: EdgeInsets.symmetric(
-                                horizontal: 17.w, vertical: 10.h),
-                            margin: EdgeInsets.symmetric(vertical: 15.h),
-                            height: 70.h,
-                            decoration: BoxDecoration(
-                              border: Border.all(
-                                  color: Color(0xFF771F98), width: 2),
-                              borderRadius: BorderRadius.circular(14.r),
-                            ),
-                            child: Row(
-                              children: [
-                                CircleAvatar(
-                                  backgroundImage: (user.profileID != null)
-                                      ? NetworkImage(
-                                          'http://10.0.2.2:5000/${user.profileID}')
-                                      : null,
-                                  backgroundColor: Colors.grey,
-                                  child: (user.profileID == null)
-                                      ? Icon(
-                                          Icons.account_circle_outlined,
-                                          size: 30.h,
-                                          color: Colors.black,
-                                        )
-                                      : null,
-                                ),
-                                SizedBox(
-                                  width: 15.w,
-                                ),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      user.userName,
-                                      style: GoogleFonts.poppins(
-                                        fontWeight: FontWeight.w600,
-                                        color: const Color(0xFF181818),
-                                        fontSize: 16.sp,
+                          return GestureDetector(
+                            onTap: () {
+                              Navigator.pushNamed(context, '/chat',
+                                  arguments: user);
+                            },
+                            child: Container(
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 17.w, vertical: 10.h),
+                              margin: EdgeInsets.symmetric(vertical: 15.h),
+                              height: 70.h,
+                              decoration: BoxDecoration(
+                                border: Border.all(
+                                    color: Color(0xFF771F98), width: 2),
+                                borderRadius: BorderRadius.circular(14.r),
+                              ),
+                              child: Row(
+                                children: [
+                                  CircleAvatar(
+                                    backgroundImage: (user.profileID != null)
+                                        ? NetworkImage(
+                                            'http://10.0.2.2:5000/${user.profileID}')
+                                        : null,
+                                    backgroundColor: Colors.grey,
+                                    child: (user.profileID == null)
+                                        ? Icon(
+                                            Icons.account_circle_outlined,
+                                            size: 30.h,
+                                            color: Colors.black,
+                                          )
+                                        : null,
+                                  ),
+                                  SizedBox(
+                                    width: 15.w,
+                                  ),
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        user.userName,
+                                        style: GoogleFonts.poppins(
+                                          fontWeight: FontWeight.w600,
+                                          color: const Color(0xFF181818),
+                                          fontSize: 16.sp,
+                                        ),
                                       ),
-                                    ),
-                                    Text(
-                                      user.email,
-                                      style: GoogleFonts.poppins(
-                                        color: const Color(0xFF6B6B6B),
-                                        fontSize: 12.sp,
+                                      Text(
+                                        user.email,
+                                        style: GoogleFonts.poppins(
+                                          color: const Color(0xFF6B6B6B),
+                                          fontSize: 12.sp,
+                                        ),
                                       ),
-                                    ),
-                                  ],
-                                )
-                              ],
+                                    ],
+                                  )
+                                ],
+                              ),
                             ),
                           );
                         },
@@ -283,8 +299,13 @@ class _BodyState extends State<Body> {
 }
 
 class User {
+  int id;
   String userName;
   String email;
   dynamic profileID;
-  User({required this.userName, required this.email, required this.profileID});
+  User(
+      {required this.id,
+      required this.userName,
+      required this.email,
+      required this.profileID});
 }

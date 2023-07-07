@@ -10,6 +10,11 @@ const otpGenerator = require('otp-generator');
 const sendOTP = require('./controllers/sendMail');
 const bodyParser = require('body-parser')
 const multer = require('multer');
+const socketIO = require('socket.io')
+
+
+
+
 
 //Middleware
 server.use(cors());
@@ -87,52 +92,6 @@ async function isValid(email, password) {
         return 5; // Return null if an error occurs during the query
     }
 }
-
-// server.post(
-//     '/api/signin',
-//     async (req, res) => {
-//         try {
-//             const { userName, email, password, img } = req.body;
-//             console.log(req.body)
-//             const hashedPassword = await hashPassword(password);
-//             if (img == null) {
-//                 const addUser = await pool.query("INSERT INTO \"user\" (username,email,password,profilePath) VALUES ($1,$2,$3,$4) RETURNING *", [userName, email, hashedPassword, null]);
-//                 console.log(addUser.rows[0]);
-//                 const { password, ...data } = addUser.rows[0]
-//                 res.status(200).json({
-//                     success: true,
-//                     msg: "Account created Successfully",
-//                     data: data
-//                 });
-//             }
-//             else {
-//                 var imageName = saveImageFromBase64(img);
-//                 const addUser = await pool.query("INSERT INTO \"user\" (username,email,password,profilePath) VALUES ($1,$2,$3,$4) RETURNING *", [userName, email, hashedPassword, imageName]);
-//                 console.log(addUser.rows[0]);
-//                 const { password, ...data } = addUser.rows[0]
-//                 res.status(200).json({
-//                     success: true,
-//                     msg: "Account created Successfully",
-//                     data: data
-//                 });
-
-//             }
-//         } catch (error) {
-//             console.log(error);
-//             if (error.code == 23505)
-//                 res.status(502).json({
-//                     success: false,
-//                     msg: "Account is already created with same email"
-//                 });
-//             else {
-//                 res.status(502).json({
-//                     success: false,
-//                     msg: "There is a server error. Error Code (E002)"
-//                 })
-//             }
-//         }
-//     }
-// )
 
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
@@ -447,7 +406,41 @@ server.post('/api/verify', async (req, res) => {
     }
 })
 
+server.get('/api/chats/user1/:id1/user2/:id2',async (req,res) => {
+    try {
+        const {id1,id2} = req.params;
+        const chats = await pool.query("SELECT sender_id, receiver_id, message, timestamp from chats WHERE (sender_id=$1 AND receiver_id = $2) OR (sender_id=$2 AND receiver_id = $1) ORDER BY timestamp ASC;",[id1,id2])
+        console.log(chats.rows);
+        res.json({
+            success : true,
+            msg : 'Fetched chats successfully',
+            chats : chats.rows
+        })
+        
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({
+            success: false,
+            msg: "Sorry, there is a server error. Error Code : E010"
+        });
+    }
+})
 
-server.listen(5000, () => {
+
+
+const app = server.listen(5000, () => {
     console.log("server listening at port 5000");
 })
+
+const io = socketIO(app)
+
+io.on('connection',(socket) => {
+    console.log('New Connection made')
+    socket.on('disconnect', () => {
+        console.log('Client disconnected');
+      });
+    
+      socket.emit('chat-message', 'Hello World');
+})
+
+

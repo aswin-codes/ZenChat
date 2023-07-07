@@ -74,6 +74,7 @@ class Body extends StatefulWidget {
 class _BodyState extends State<Body> {
   String query = '';
   TextEditingController _searchController = TextEditingController();
+  bool isLoading = true;
 
   void showAlert(BuildContext context, String errorMsg) {
     showDialog(
@@ -116,7 +117,9 @@ class _BodyState extends State<Body> {
     final id = data['id'];
     final url = Uri.parse('http://10.0.2.2:5000/api/users/random/$id');
     final response = await http.get(url);
-
+    setState(() {
+      isLoading = false;
+    });
     if (response.statusCode == 200) {
       final Map<dynamic, dynamic> respBody = jsonDecode(response.body);
       List<User> data = [];
@@ -145,7 +148,8 @@ class _BodyState extends State<Body> {
     final Map<dynamic, dynamic> data = jsonDecode(prefs.getString('creds')!);
     final id = data['id'];
 
-    final url = Uri.parse('http://10.0.2.2:5000/api/users/$id/search?query=$query');
+    final url =
+        Uri.parse('http://10.0.2.2:5000/api/users/$id/search?query=$query');
     final response = await http.get(url);
     final Map<dynamic, dynamic> respBody = jsonDecode(response.body);
     if (response.statusCode == 200 && respBody['success'] == true) {
@@ -216,7 +220,7 @@ class _BodyState extends State<Body> {
             SizedBox(
               height: 30.h,
             ),
-            Expanded(
+             isLoading ? Expanded(child: Center(child:CircularProgressIndicator() ,) ,) : Expanded(
                 child: (_users.length != 0)
                     ? ListView.builder(
                         itemCount: _users.length,

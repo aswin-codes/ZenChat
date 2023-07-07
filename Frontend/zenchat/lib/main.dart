@@ -17,6 +17,8 @@ void main() => runApp(MyApp());
 
 class MyApp extends StatelessWidget {
   const MyApp({Key? key}) : super(key: key);
+  
+
 
   @override
   Widget build(BuildContext context) {
@@ -79,7 +81,7 @@ class MyApp extends StatelessWidget {
                 '/search': (context) => const Search(),
                 '/settings': (context) => const Settings(),
                 '/changepassword' : (context) => const ChangePassword(),
-                '/chat' : (context) => const Chat(),
+                '/chat' : (context) =>  Chat(),
               },
             );
           },

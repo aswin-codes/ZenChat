@@ -20,8 +20,10 @@ class Chat extends StatefulWidget {
 class _ChatState extends State<Chat> {
   @override
   Widget build(BuildContext context) {
-    final receiverUser = ModalRoute.of(context)!.settings.arguments as User;
-
+    final Map<String, dynamic> args =
+        ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+    final receiverUser = args['user'];
+    final IO.Socket socket = args['socket'];
     return Scaffold(
         backgroundColor: Colors.white,
         appBar: PreferredSize(
@@ -43,6 +45,7 @@ class _ChatState extends State<Chat> {
               children: [
                 GestureDetector(
                     onTap: () {
+                      socket.disconnect();
                       Navigator.pop(context);
                     },
                     child: const Icon(
@@ -86,6 +89,7 @@ class _ChatState extends State<Chat> {
         ),
         body: Body(
           receiver: receiverUser,
+          socket: socket,
         ));
   }
 }
@@ -99,7 +103,8 @@ class ChatMessage {
 
 class Body extends StatefulWidget {
   final User receiver;
-  const Body({super.key, required this.receiver});
+  final IO.Socket socket;
+  const Body({super.key, required this.receiver, required this.socket});
 
   @override
   State<Body> createState() => _BodyState();
@@ -110,6 +115,7 @@ class _BodyState extends State<Body> {
   final TextEditingController _inputController = TextEditingController();
   int id = 0;
   List<ChatMessage> _chatList = [];
+  //IO.Socket? socket;
 
   void showAlert(BuildContext context, String errorMsg) {
     showDialog(
@@ -145,56 +151,78 @@ class _BodyState extends State<Body> {
   }
 
   Future<void> getChats() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    final Map<dynamic, dynamic> data = jsonDecode(prefs.getString('creds')!);
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+  final Map<dynamic, dynamic> data = jsonDecode(prefs.getString('creds')!);
+
+  setState(() {
+    id = data['id'];
+  });
+  final response = await http.get(Uri.parse(
+      'http://10.0.2.2:5000/api/chats/user1/$id/user2/${widget.receiver.id}'));
+  final respBody = jsonDecode(response.body);
+  if (response.statusCode == 200 && respBody['success'] == true) {
+    List<ChatMessage> newChatMessages = []; // Store new chat messages separately
+
+    for (int i = 0; i < respBody['chats'].length; i++) {
+      final currentChat = respBody['chats'][i];
+      String timestampString = currentChat['timestamp'];
+
+      newChatMessages.add(ChatMessage(
+          id: currentChat['sender_id'],
+          text: currentChat['message'],
+          time: DateTime.parse(timestampString).toLocal()));
+    }
 
     setState(() {
-      id = data['id'];
+      _chatList.addAll(newChatMessages); // Add new chat messages to _chatList
     });
-    final response = await http.get(Uri.parse(
-        'http://10.0.2.2:5000/api/chats/user1/$id/user2/${widget.receiver.id}'));
-    final respBody = jsonDecode(response.body);
-    if (response.statusCode == 200 && respBody['success'] == true) {
-      for (int i = 0; i < respBody['chats'].length; i++) {
-        final currentChat = respBody['chats'][i];
-        String timestampString = currentChat['timestamp'];
 
-        setState(() {
-          print(currentChat['timestamp'].runtimeType);
-          _chatList.add(ChatMessage(
-              id: currentChat['sender_id'],
-              text: currentChat['message'],
-              time: DateTime.parse(timestampString).toLocal()));
-        });
-      }
-    } else {
-      showAlert(context, respBody['msg']);
-    }
+    // Scroll to the bottom after the state is updated
+    WidgetsBinding.instance!.addPostFrameCallback((_) {
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeOut,
+      );
+    });
+  } else {
+    showAlert(context, respBody['msg']);
   }
+}
 
-  void connectToSocket() {
-    IO.Socket socket = IO.io('http://10.0.2.2:3000',
-        IO.OptionBuilder().setTransports(['websocket']).build());
-    //socket.connect();
-    socket.onConnect((_) {
-      print('Connected to server');
-
-      socket.on('chat-message', (data) {
-        print('Received chat message: $data');
+  void addReceiversText(String text) {
+    if (mounted) {
+      // Check if the widget is still mounted in the tree
+      setState(() {
+        _chatList.add(ChatMessage(
+            id: widget.receiver.id, text: text, time: DateTime.now()));
       });
-    });
-
-    socket.onConnectError((error) {
-      print('Connection error: $error');
-    });
+      WidgetsBinding.instance!.addPostFrameCallback((_) {
+        if (mounted) {
+          // Check again before scrolling to avoid calling setState on a disposed widget
+          _scrollController.animateTo(
+            _scrollController.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+        }
+      });
+    }
   }
 
   Future<void> addText() async {
     if (_inputController.text != '') {
       setState(() {
         _chatList.add(ChatMessage(
-            id: 42, text: _inputController.text, time: DateTime.now()));
+            id: id, text: _inputController.text, time: DateTime.now()));
       });
+      widget.socket.emit(
+          'chat-message',
+          jsonEncode({
+            'sender_id': id,
+            'receiver_id': widget.receiver.id,
+            'message': _inputController.text
+          }));
       _inputController.text = '';
       _scrollController.animateTo(
         _scrollController.position.maxScrollExtent,
@@ -202,6 +230,10 @@ class _BodyState extends State<Body> {
         curve: Curves.easeOut,
       );
     }
+  }
+
+  void listenChat() {
+    widget.socket.on('new-message', (data) => addReceiversText(data));
   }
 
   @override
@@ -214,7 +246,7 @@ class _BodyState extends State<Body> {
   void initState() {
     // TODO: implement initState
     getChats();
-    connectToSocket();
+    listenChat();
     super.initState();
   }
 

@@ -5,15 +5,20 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 class Search extends StatelessWidget {
   const Search({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final IO.Socket socket =
+        ModalRoute.of(context)!.settings.arguments as IO.Socket;
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Body(),
+      body: Body(
+        socket: socket,
+      ),
       bottomNavigationBar: Container(
         height: 80.h,
         width: double.maxFinite,
@@ -65,7 +70,8 @@ class Search extends StatelessWidget {
 }
 
 class Body extends StatefulWidget {
-  const Body({super.key});
+  final IO.Socket socket;
+  const Body({super.key, required this.socket});
 
   @override
   State<Body> createState() => _BodyState();
@@ -220,81 +226,88 @@ class _BodyState extends State<Body> {
             SizedBox(
               height: 30.h,
             ),
-             isLoading ? Expanded(child: Center(child:CircularProgressIndicator() ,) ,) : Expanded(
-                child: (_users.length != 0)
-                    ? ListView.builder(
-                        itemCount: _users.length,
-                        itemBuilder: (BuildContext context, int index) {
-                          final User user = _users[index];
-                          return GestureDetector(
-                            onTap: () {
-                              Navigator.pushNamed(context, '/chat',
-                                  arguments: user);
-                            },
-                            child: Container(
-                              padding: EdgeInsets.symmetric(
-                                  horizontal: 17.w, vertical: 10.h),
-                              margin: EdgeInsets.symmetric(vertical: 15.h),
-                              height: 70.h,
-                              decoration: BoxDecoration(
-                                border: Border.all(
-                                    color: Color(0xFF771F98), width: 2),
-                                borderRadius: BorderRadius.circular(14.r),
-                              ),
-                              child: Row(
-                                children: [
-                                  CircleAvatar(
-                                    backgroundImage: (user.profileID != null)
-                                        ? NetworkImage(
-                                            'http://10.0.2.2:5000/${user.profileID}')
-                                        : null,
-                                    backgroundColor: Colors.grey,
-                                    child: (user.profileID == null)
-                                        ? Icon(
-                                            Icons.account_circle_outlined,
-                                            size: 30.h,
-                                            color: Colors.black,
-                                          )
-                                        : null,
+            isLoading
+                ? const Expanded(
+                    child: Center(
+                      child: CircularProgressIndicator(),
+                    ),
+                  )
+                : Expanded(
+                    child: (_users.length != 0)
+                        ? ListView.builder(
+                            itemCount: _users.length,
+                            itemBuilder: (BuildContext context, int index) {
+                              final User user = _users[index];
+                              return GestureDetector(
+                                onTap: () {
+                                  Navigator.pushNamed(context, '/chat',
+                                      arguments: {'user' : user, 'socket': widget.socket});
+                                },
+                                child: Container(
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: 17.w, vertical: 10.h),
+                                  margin: EdgeInsets.symmetric(vertical: 15.h),
+                                  height: 70.h,
+                                  decoration: BoxDecoration(
+                                    border: Border.all(
+                                        color: Color(0xFF771F98), width: 2),
+                                    borderRadius: BorderRadius.circular(14.r),
                                   ),
-                                  SizedBox(
-                                    width: 15.w,
-                                  ),
-                                  Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    mainAxisSize: MainAxisSize.min,
+                                  child: Row(
                                     children: [
-                                      Text(
-                                        user.userName,
-                                        style: GoogleFonts.poppins(
-                                          fontWeight: FontWeight.w600,
-                                          color: const Color(0xFF181818),
-                                          fontSize: 16.sp,
-                                        ),
+                                      CircleAvatar(
+                                        backgroundImage: (user.profileID !=
+                                                null)
+                                            ? NetworkImage(
+                                                'http://10.0.2.2:5000/${user.profileID}')
+                                            : null,
+                                        backgroundColor: Colors.grey,
+                                        child: (user.profileID == null)
+                                            ? Icon(
+                                                Icons.account_circle_outlined,
+                                                size: 30.h,
+                                                color: Colors.black,
+                                              )
+                                            : null,
                                       ),
-                                      Text(
-                                        user.email,
-                                        style: GoogleFonts.poppins(
-                                          color: const Color(0xFF6B6B6B),
-                                          fontSize: 12.sp,
-                                        ),
+                                      SizedBox(
+                                        width: 15.w,
                                       ),
+                                      Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            user.userName,
+                                            style: GoogleFonts.poppins(
+                                              fontWeight: FontWeight.w600,
+                                              color: const Color(0xFF181818),
+                                              fontSize: 16.sp,
+                                            ),
+                                          ),
+                                          Text(
+                                            user.email,
+                                            style: GoogleFonts.poppins(
+                                              color: const Color(0xFF6B6B6B),
+                                              fontSize: 12.sp,
+                                            ),
+                                          ),
+                                        ],
+                                      )
                                     ],
-                                  )
-                                ],
-                              ),
+                                  ),
+                                ),
+                              );
+                            },
+                          )
+                        : Center(
+                            child: Text(
+                              "No users found",
+                              style: GoogleFonts.poppins(
+                                  fontSize: 15.sp, color: Colors.black),
                             ),
-                          );
-                        },
-                      )
-                    : Center(
-                        child: Text(
-                          "No users found",
-                          style: GoogleFonts.poppins(
-                              fontSize: 15.sp, color: Colors.black),
-                        ),
-                      )),
+                          )),
           ],
         ),
       ),

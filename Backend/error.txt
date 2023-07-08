@@ -8,3 +8,4 @@ E007 - Account Search Error
 E008 - Account Updating Error
 E009 - Password checking for change password error
 E010 - Chat retrieving error
+E011 - Error fetching chat list

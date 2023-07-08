@@ -24,18 +24,7 @@ server.use(bodyParser.json({ limit: ' 10mb' }))
 
 let otp = '';
 
-function saveImageFromBase64(base64String) {
-    const directoryPath = path.join(__dirname, "profileStorage")
-    const base64Data = base64String.replace(/^data:image\/[^;]+;base64,/, '');
-    const imageData = Buffer.from(base64Data, 'base64');
-    const filename = `${uuidv4()}.png`;
-    const filePath = path.join(directoryPath, filename)//`${directoryPath}/${filename}`;  
-    // Save the image to the specified file path
-    fs.writeFileSync(filePath, imageData);
 
-    // Return the file path
-    return filename;
-}
 
 //Return hashed password if its successful else return null if there is an error
 async function hashPassword(plainPassword) {
@@ -295,11 +284,11 @@ server.get('/api/users/:id/search', async (req, res) => {
         const { query } = req.query;
 
         const result = await pool.query(
-            'SELECT username, email, profilepath,id FROM "user" WHERE id <> $2 AND (username ILIKE $1 OR email ILIKE $1)  LIMIT 10', [`%${query}%`,id]
+            'SELECT username, email, profilepath,id FROM "user" WHERE id <> $2 AND (username ILIKE $1 OR email ILIKE $1)  LIMIT 10', [`%${query}%`, id]
         )
 
         const users = result.rows;
-        
+
 
 
         res.status(200).json({
@@ -320,9 +309,9 @@ server.get('/api/users/:id/search', async (req, res) => {
 server.get('/api/users/random/:id', async (req, res) => {
     try {
 
-        const {id} = req.params;
+        const { id } = req.params;
         const result = await pool.query(
-            'SELECT username, email, profilepath,id FROM "user" WHERE id <> $1 ORDER BY RANDOM() LIMIT 10 ',[id]
+            'SELECT username, email, profilepath,id FROM "user" WHERE id <> $1 ORDER BY RANDOM() LIMIT 10 ', [id]
         )
 
         const users = result.rows;
@@ -382,19 +371,19 @@ server.patch('/api/users/:id', store.single('image'), async (req, res) => {
 
 server.post('/api/verify', async (req, res) => {
     try {
-        const {email,password} = req.body;
-        const code = await isValid(email,password);
-        if (code == 1){
+        const { email, password } = req.body;
+        const code = await isValid(email, password);
+        if (code == 1) {
             res.status(200).json({
-                success : true,
-                isValid : true,
-                msg : "Password is entered correct"
+                success: true,
+                isValid: true,
+                msg: "Password is entered correct"
             })
         } else {
             res.status(401).json({
-                success : true,
-                isValid : false,
-                msg : "Password is incorrect. Try again or click forgot password"
+                success: true,
+                isValid: false,
+                msg: "Password is incorrect. Try again or click forgot password"
             })
         }
     } catch (error) {
@@ -406,17 +395,17 @@ server.post('/api/verify', async (req, res) => {
     }
 })
 
-server.get('/api/chats/user1/:id1/user2/:id2',async (req,res) => {
+server.get('/api/chats/user1/:id1/user2/:id2', async (req, res) => {
     try {
-        const {id1,id2} = req.params;
-        const chats = await pool.query("SELECT sender_id, receiver_id, message, timestamp from chats WHERE (sender_id=$1 AND receiver_id = $2) OR (sender_id=$2 AND receiver_id = $1) ORDER BY timestamp ASC;",[id1,id2])
+        const { id1, id2 } = req.params;
+        const chats = await pool.query("SELECT sender_id, receiver_id, message, timestamp from chats WHERE (sender_id=$1 AND receiver_id = $2) OR (sender_id=$2 AND receiver_id = $1) ORDER BY timestamp ASC;", [id1, id2])
         console.log(chats.rows);
         res.json({
-            success : true,
-            msg : 'Fetched chats successfully',
-            chats : chats.rows
+            success: true,
+            msg: 'Fetched chats successfully',
+            chats: chats.rows
         })
-        
+
     } catch (error) {
         console.log(error);
         res.status(500).json({
@@ -426,21 +415,28 @@ server.get('/api/chats/user1/:id1/user2/:id2',async (req,res) => {
     }
 })
 
+server.get('/api/chatlist/:id', async (req,res) =>{
+    try {
+        const {id} = req.params;
+        const chatList = await pool.query('SELECT u.id, u.username, u.email,  u.profilepath, c.message, c.timestamp FROM "user" u JOIN ( SELECT MAX(timestamp) AS max_timestamp, CASE WHEN sender_id = $1 THEN receiver_id WHEN receiver_id = $1 THEN sender_id END AS chat_partner_id FROM chats  WHERE sender_id = $1 OR receiver_id = $1 GROUP BY CASE WHEN sender_id = $1 THEN receiver_id WHEN receiver_id = $1 THEN sender_id END) c_max ON u.id = c_max.chat_partner_id JOIN chats c ON c_max.chat_partner_id = CASE WHEN c.sender_id = $1 THEN c.receiver_id WHEN c.receiver_id = $1 THEN c.sender_id END AND c_max.max_timestamp = c.timestamp ORDER BY c.timestamp DESC',[id]);
+        res.json({
+            success : true,
+            msg : "Fetched chat list successfully",
+            chatlist : chatList.rows
+        })
+        
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({
+            success: false,
+            msg: "Sorry, there is a server error. Error Code : E011"
+        });
+    }
+})
 
-
-const app = server.listen(5000, () => {
+server.listen(5000, () => {
     console.log("server listening at port 5000");
 })
 
-const io = socketIO(app)
-
-io.on('connection',(socket) => {
-    console.log('New Connection made')
-    socket.on('disconnect', () => {
-        console.log('Client disconnected');
-      });
-    
-      socket.emit('chat-message', 'Hello World');
-})
 
 
